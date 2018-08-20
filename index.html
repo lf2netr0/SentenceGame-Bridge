@@ -145,7 +145,7 @@
             }
 
             //畫出河流
-            this.sky = this.add.image(950 * scaleW, 250 * scaleH, 'sky').setScale(1);
+            this.sky = this.add.image(950 * scaleW, 250 * scaleH, 'sky').setScale(scaleW);
             this.river = this.add.image(1000 * scaleW, 520 * scaleH, 'river').setScale(scaleW);
 
             //發音鈕
@@ -310,7 +310,7 @@
             game.sound.play('victory')
             scenes.successP.setVisible(true)
             scenes.overTitle.setText('Clear')
-            scenes.overTitle.setX(800)
+            scenes.overTitle.setX(800*scaleW)
             scenes.bridgeBody.setVisible(true)
             scenes.graphics.setVisible(false)
             scenes.resetBtn.setVisible(false)
@@ -322,7 +322,7 @@
 
             game.sound.play('fail')
             scenes.failP.setVisible(true)
-            scenes.overTitle.setX(825)
+            scenes.overTitle.setX(825*scaleW)
             scenes.overTitle.setText('Fail')
             scenes.graphics.setVisible(false)
             scenes.resetBtn.setVisible(false)
