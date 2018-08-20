@@ -10,8 +10,8 @@
     <script>
         var config = {
             type: Phaser.AUTO,
-            width: 1920,
-            height: 768,
+            width: window.innerWidth,
+            height: window.innerHeight,
             physics: {
                 default: 'arcade',
                 arcade: {
@@ -24,12 +24,22 @@
                 update: update
             }
         };
-        var currentSec = 120;
-        var currentTime = currentSec;
-        var count = 0, countdown, info, data, scenes, dataIndex = 0, levelIndex = 0, correctCount = 0, successP, failP, overTitle, vol, bridges, answerArr = [];
-        var tmpArr = []
+
+        var currentSec = 120,
+            currentTime = 120,
+            count = 0,
+            scenes,
+            dataIndex = 0,
+            levelIndex = 0,
+            correctCount = 0,
+            answerArr = [];
+
         var game = new Phaser.Game(config);
-        var platforms;
+
+        //螢幕縮放比例
+        var scaleW = window.innerWidth / 1920,
+            scaleH = window.innerHeight / 768,
+            scaleA = (window.innerWidth * window.innerHeight) / (1920 * 768)
 
         var Bridge = new Phaser.Class({
 
@@ -43,12 +53,12 @@
                     this.OY = y;
                     this.selected = false;
                     this.setTexture('bridgepic');
-                    this.setScale(0.1)
+                    this.setScale(0.1 * scaleW)
                     this.setPosition(x, y)
                     this.setOrigin(0);
-                    this.setData('A', vol[dataIndex])
+                    this.setData('A', scenes.val[dataIndex])
                     this.setDepth(1)
-                    this.txt = scene.add.text(x + 50, y + 20, vol[dataIndex], { fontSize: '20px', fill: '#fff' }).setDepth(2)
+                    this.txt = scene.add.text((x + 50) * scaleW, (y + 20) * scaleW, scenes.val[dataIndex], { fontSize: '20px', fill: '#fff' }).setDepth(2)
 
 
                     scene.physics.world.enableBody(this, 0);
@@ -64,17 +74,14 @@
 
                     })
 
-                    // this.setCollideWorldBounds(true);
-
 
                     var tmp = this
                     this.on('pointerup', function (d, e) {
-                        console.log(tmp.x, tmp.y)
-                        if ((tmp.x >= 500 && tmp.x <= 1400) && (tmp.y >= 150 && tmp.y <= 350) && !tmp.selected) {
+                        if ((tmp.x >= 500 * scaleW && tmp.x <= 1400 * scaleW) && (tmp.y >= 150 * scaleH && tmp.y <= 350 * scaleH) && !tmp.selected) {
                             answerArr.push(tmp.getData('A'))
 
-                            tmp.x = 510 + 150 * ((answerArr.length - 1) % 5)
-                            tmp.y = 150 + 100 * Math.floor((answerArr.length - 1) / 5)
+                            tmp.x = (510 + 150 * ((answerArr.length - 1) % 5)) * scaleW
+                            tmp.y = (150 + 100 * Math.floor((answerArr.length - 1) / 5)) * scaleH
                             tmp.selected = true;
                         } else if (!tmp.selected) {
                             tmp.x = x
@@ -97,14 +104,17 @@
 
 
         });
+
         function preload() {
             this.load.setBaseURL('./');
-            
+
             this.load.json('levelData', 'json/question.json');
 
             this.load.image('groundL', 'img/groundL.png');
             this.load.image('groundR', 'img/groundR.png');
             this.load.image('river', 'img/river.png');
+            
+            this.load.image('sky', 'img/sky.png');
             this.load.image('bridgepic', 'img/bridgepic.png');
             this.load.image('bridgeBody', 'img/bridgeBody.png');
 
@@ -116,106 +126,125 @@
             this.load.image('resetBtn', 'img/makefg.png');
             this.load.image('buildBtn', 'img/buildBtn.png');
 
-
             this.load.audio('correct', 'audio/crrect_answer3.mp3');
             this.load.audio('error', 'audio/blip03.mp3');
             this.load.audio('victory', 'audio/Victory.mp3');
             this.load.audio('fail', 'audio/Fail.mp3');
             this.load.audio('destruction', 'audio/destruction1.mp3');
 
-            
-
         }
 
         function create() {
             scenes = this;
-            data = this.cache.json.get('levelData');
-            for (var i=0;i<data.length;i++){
-                scenes.load.audio(i + 'audio', 'audio/' + data[i] + '.mp3');
 
+            //讀取Json及音檔
+            this.data = this.cache.json.get('levelData');
+            for (var i = 0; i < this.data.length; i++) {
+                scenes.load.audio(i + 'audio', 'audio/' + this.data[i] + '.mp3');
                 scenes.load.start()
             }
-            this.add.image(1000, 460, 'river');
-            this.playBtn = this.add.sprite(40, 110, 'audioBtn').setScale(0.2).setInteractive();
+
+            //畫出河流
+            this.sky = this.add.image(950 * scaleW, 250 * scaleH, 'sky').setScale(1);
+            this.river = this.add.image(1000 * scaleW, 520 * scaleH, 'river').setScale(scaleW);
+
+            //發音鈕
+            this.playBtn = this.add.sprite(40 * scaleW, 110 * scaleH, 'audioBtn').setScale(0.2 * scaleW).setInteractive();
             this.playBtn.on('pointerdown', playTarget);
-            successP = this.add.image(900, 600, 'person').setScale(0.5).setDepth(2).setVisible(false)
-            failP = this.add.image(900, 600, 'personSad').setScale(0.5).setDepth(2).setVisible(false)
-            this.resetBtn = this.add.sprite(1430, 170, 'resetBtn').setScale(0.15).setInteractive();
-            this.buildBtn = this.add.sprite(1430, 220, 'buildBtn').setScale(0.2).setInteractive();
+
+            //還原鈕
+            this.resetBtn = this.add.sprite(1430 * scaleW, 170 * scaleH, 'resetBtn').setScale(0.15 * scaleW).setInteractive();
             this.resetBtn.on('pointerdown', resetBridge);
+
+            //建造鈕
+            this.buildBtn = this.add.sprite(1430 * scaleW, 220 * scaleH, 'buildBtn').setScale(0.2 * scaleW).setInteractive();
             this.buildBtn.on('pointerdown', buildBridge);
 
-            platforms = this.physics.add.staticGroup();
-            
-            platforms.create(300, 568, 'groundL')
-            platforms.create(1600, 568, 'groundR')
+            //產生地板
+            this.platforms = this.physics.add.staticGroup();
+            this.platforms.create(300 * scaleW, 580 * scaleH, 'groundL').setScale(scaleW)
+            this.platforms.create(1600 * scaleW, 580 * scaleH, 'groundR').setScale(scaleW)
 
+            //結束畫面
+            this.successP = this.add.image(925 * scaleW, 235 * scaleH, 'person').setScale(0.3 * scaleW).setDepth(2).setVisible(false)
+            this.failP = this.add.image(925 * scaleW, 560 * scaleH, 'personSad').setScale(0.5 * scaleW).setDepth(2).setVisible(false)
+            this.overTitle = this.add.text(850 * scaleW, 100 * scaleH, '', { fontSize: 64 * scaleH + 'px', fill: '#fff' })
+            this.bridgeBody = this.add.image(950 * scaleW, 330 * scaleH, 'bridgeBody').setScale(1.5 * scaleW).setVisible(false);
 
-            this.bridgeBody = this.add.image(950, 250, 'bridgeBody').setScale(1.5).setVisible(false);
-            timedEvent = this.time.addEvent({ delay: 1000, callback: countDown, callbackScope: this });
-            overTitle = this.add.text(800, 100, '', { fontSize: '64px', fill: '#fff' })
-            countdown = this.add.text(16, 16, 'Time: 120', { fontSize: '32px', fill: '#fff' });
-            info = this.add.text(16, 50, '關卡: ' + (levelIndex + 1), { fontSize: '32px', fill: '#fff' });
+            //計時
+            this.timedEvent = this.time.addEvent({ delay: 1000, callback: countDown, callbackScope: this });
 
+            //計時字及關卡資訊
+            this.countdown = this.add.text(16 * scaleW, 16 * scaleH, 'Time: 120', { fontSize: 32 * scaleH + 'px', fill: '#fff' });
+            this.info = this.add.text(16 * scaleW, 50 * scaleH, '關卡: ' + (levelIndex + 1), { fontSize: 32 * scaleH + 'px', fill: '#fff' });
 
-            bridges = [];
-
-
+            //作答區域
             this.graphics = this.add.graphics();
-
             this.graphics.fillStyle(0xffffff, 0.6);
-            this.graphics.fillRect(500, 150, 900, 200).setDepth(1);
+            this.graphics.fillRect(500 * scaleW, 150 * scaleH, 900 * scaleW, 200 * scaleH).setDepth(1 * scaleW);
 
+            //分解句子並劃出橋體
+            this.bridges = [];
+            this.val = this.data[levelIndex].split(' ')
+            this.ans = this.val.slice()
+            this.val.sort(function(){return Math.random()>0.5?-1:1;});
+            
+            this.bridgesTotal = this.val.length;
 
-            vol = data[levelIndex].split(' ')
-
-            bridgesTotal = vol.length;
-            for (var i = 0; i < bridgesTotal; i++) {
-                bridges[i] = new Bridge(scenes, 500 + i * 200, 20);
+            for (var i = 0; i < this.bridgesTotal; i++) {
+                this.bridges[i] = new Bridge(scenes, (500 + i * 200) * scaleW, 20 * scaleH);
             }
+
+            //1秒後播放第一題
+            this.time.addEvent({ delay: 1000, callback: playTarget, callbackScope: this });
 
         }
 
         function update() {
-            for (var i = 0; i < vol.length; i++) {
 
-                bridges[i].txt.x = bridges[i].x + 50;
-                bridges[i].txt.y = bridges[i].y + 20;
+            for (var i = 0; i < scenes.val.length; i++) {
+
+                scenes.bridges[i].txt.x = scenes.bridges[i].x + 50 * scaleW;
+                scenes.bridges[i].txt.y = scenes.bridges[i].y + 20 * scaleH;
             }
+
         }
 
 
         function killSprite(sprite) {
-            sprite.particles.destroy();
             sprite.disableBody(true, true);
         }
 
         function killAllBrdige() {
-            for (var i = 0; i < bridges.length; i++) {
-                bridges[i].txt.setVisible(false);
-                bridges[i].disableBody(true, true);
+            for (var i = 0; i < scenes.bridges.length; i++) {
+                scenes.bridges[i].txt.setVisible(false);
+                scenes.bridges[i].disableBody(true, true);
             }
 
         }
 
+        //倒數事件
         function countDown() {
             currentSec--;
             count++;
-            timedEvent.reset({ delay: 1000, callback: countDown, callbackScope: this, repeat: 1 });
-            countdown.setText('Time: ' + currentSec);
+            scenes.timedEvent.reset({ delay: 1000, callback: countDown, callbackScope: this, repeat: 1 });
+            scenes.countdown.setText('Time: ' + currentSec);
             if (count >= currentTime) {
                 gameOver()
             }
 
         };
-        function resetBridge(scenes) {
-            for (var i = 0; i < vol.length; i++) {
-                bridges[i].reset()
+
+        //還原事件
+        function resetBridge() {
+            for (var i = 0; i < scenes.val.length; i++) {
+                scenes.bridges[i].reset()
             }
         }
 
+        //建立橋事件
         function buildBridge() {
-            if (vol.toString() == answerArr.toString()) {
+            if (scenes.ans.toString() == answerArr.toString()) {
                 game.sound.play('correct')
                 killAllBrdige()
                 correct()
@@ -225,9 +254,11 @@
             }
 
         }
+
+        //答對題目處理
         function correct() {
             correctCount += 1
-            if (levelIndex + 1 < data.length) {
+            if (levelIndex + 1 < scenes.data.length) {
 
                 levelIndex += 1
                 scenes.time.addEvent({ delay: 500, callback: next, callbackScope: scenes });
@@ -236,20 +267,24 @@
             }
         }
 
+        //下一題
         function next() {
-            info.setText('關卡: ' + (levelIndex + 1));
+            scenes.info.setText('關卡: ' + (levelIndex + 1));
             game.sound.play(levelIndex + 'audio');
-            vol = data[levelIndex].split(' ')
+            scenes.val = scenes.data[levelIndex].split(' ')
+            scenes.ans = scenes.val.slice()
+            scenes.val.sort(function(){return Math.random()>0.5?-1:1;});
             dataIndex = 0;
             answerArr = [];
-            for (var i = 0; i < vol.length; i++) {
-                bridges[i] = new Bridge(scenes, 500 + i * 200, 20);
+            for (var i = 0; i < scenes.val.length; i++) {
+                scenes.bridges[i] = new Bridge(scenes, (500 + i * 200) * scaleW, 20 * scaleH);
             }
         }
 
+        //遊戲結束動作
         function gameOver() {
             killAllBrdige();
-            timedEvent.destroy();
+            scenes.timedEvent.destroy();
             switch (correctCount) {
                 case 0:
                     fail()
@@ -270,38 +305,46 @@
             }
         }
 
+        //成功過關
         function success() {
             game.sound.play('victory')
-            successP.setVisible(true)
-            overTitle.setText('Clear')
+            scenes.successP.setVisible(true)
+            scenes.overTitle.setText('Clear')
+            scenes.overTitle.setX(800)
             scenes.bridgeBody.setVisible(true)
             scenes.graphics.setVisible(false)
             scenes.resetBtn.setVisible(false)
             scenes.buildBtn.setVisible(false)
         }
 
+        //通關失敗
         function fail() {
 
             game.sound.play('fail')
-            failP.setVisible(true)
-            overTitle.setText('Fail')
+            scenes.failP.setVisible(true)
+            scenes.overTitle.setX(825)
+            scenes.overTitle.setText('Fail')
             scenes.graphics.setVisible(false)
             scenes.resetBtn.setVisible(false)
             scenes.buildBtn.setVisible(false)
         }
 
+        //畫出得到的星星
         function drawStar(n) {
             for (var i = 0; i < n; i++) {
-                scenes.add.image(700 + i * 200, 300, 'star')
+                scenes.add.image((725 + i * 200) * scaleW, 350 * scaleH, 'star').setScale(scaleW)
             }
             for (var i = n; i < 3; i++) {
 
-                scenes.add.image(700 + i * 200, 300, 'starEmpty')
+                scenes.add.image((725 + i * 200) * scaleW, 350 * scaleH, 'starEmpty').setScale(scaleW)
             }
         }
+
+        //播放當前題目
         function playTarget() {
             game.sound.play(levelIndex + 'audio');
         }
+
     </script>
 
 </body>
